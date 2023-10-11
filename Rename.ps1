@@ -4,10 +4,12 @@ param(
     [Parameter(Mandatory=$true)][string]$newName
 )
 
-if (Test-Path $oldName){
-    Rename-Item -Path $oldName -NewName $newName
-    Write-Host "Archivo renombrado exitosamente a $newName."
-} else {
-    Write-Host "El archivo $oldName no existe."
-}
+try {
+  # Intenta renombrar el Archivo
+  Rename-Item -Path $oldName -NewName $newName -ErrorAction Stop
+  Write-Host "Archivo renombrado exitosamente a $newName."
+  } catch {
+    # Si hay un error (por ejemplo, el archivo ya existe), captura el error y muestra un mensaje
+    Write-Host "Error: No se pudo renombrar el archivo. Razón: $($_.Exception.Message)" -ForegroundColor Red
+  }
 
