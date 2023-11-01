@@ -9,6 +9,8 @@ function GetLongName {
         [switch]$files
     )
 
+    $count = 0 # Iniciador de contador
+
     # Si no se especifican -dir ni -files mostrar ambos
     if (-not $dir -and -not $files) {
         $dir = $true
@@ -28,12 +30,14 @@ function GetLongName {
         Write-Host "Archivos" -ForegroundColor Blue
     }
 
-    Get-ChildItem | ForEach-Object {
+    Get-ChildItem | Sort-Object LastWriteTime -Descending | ForEach-Object {
+	$count++
+
         if ($_ -is [System.IO.DirectoryInfo] -and $dir) {
-            Write-Host $_.Name -ForegroundColor Red
+            Write-Host "$count | $($_.Name)" -ForegroundColor Red
         }
         elseif ($_ -isnot [System.IO.DirectoryInfo] -and $files) {
-            Write-Host $_.Name -ForegroundColor Blue
+            Write-Host "$count | $($_.Name)" -ForegroundColor Blue
         }
     }
 }
