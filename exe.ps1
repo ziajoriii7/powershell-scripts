@@ -1,3 +1,4 @@
+
 function exe {
   param(
       [int]$limit = 7, # Default limit
@@ -37,16 +38,29 @@ function exe {
       if ($selection -match "^\d+$" -and $selection -gt 0 -and $selection -le $items.Count) {
           $selectedItem = $items[$selection - 1]
 
-          $command = Read-Host "Enter the command you want to execute on the file (leave empty for default action)"
+          # Added: Check if the selected item is a Python file and set the default command to 'py'
+          if ($selectedItem.Extension -eq '.py') {
+              $defaultCommand = 'py'
+          } else {
+              $defaultCommand = ''
+          }
+
+          # Modified: Prompt now includes default action for Python files
+          $command = Read-Host "Enter the command you want to execute on the file (leave empty for default action: $defaultCommand)"
           if ([string]::IsNullOrWhiteSpace($command)) {
+              $command = $defaultCommand
+          }
+
+          # Execute the command if it's not empty or navigate if it's a directory
+          if (![string]::IsNullOrWhiteSpace($command)) {
+              $fullCommand = "$command `"$($selectedItem.FullName)`""
+              Invoke-Expression $fullCommand
+          } else {
               if ($selectedItem.PSIsContainer) {
                   Set-Location $selectedItem.FullName
               } else {
-                  pp $selectedItem.FullName
+                  pp $selectedItem.FullName # This can be changed to another default action if needed
               }
-          } else {
-              $fullCommand = "$command `"$($selectedItem.FullName)`""
-              Invoke-Expression $fullCommand
           }
       } else {
           Write-Host "Invalid selection." -ForegroundColor Cyan
@@ -54,7 +68,10 @@ function exe {
   } else {
       Write-Host "No items to display." -ForegroundColor Yellow
   }
+
 }
+
+
 
 # Check for -full or -f flags in the arguments and set the limit if a numeric value is present.
 $fullFlag = $false
