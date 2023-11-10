@@ -30,16 +30,20 @@ function GetLongName {
         Write-Host "Archivos" -ForegroundColor Blue
     }
 
-    Get-ChildItem | Sort-Object LastWriteTime -Descending | ForEach-Object {
-	$count++
 
+    Get-ChildItem | Sort-Object LastWriteTime -Descending | ForEach-Object {
+        $count++
+    
+        $formattedCount =  "{0,2}|" -f $count
+        
         if ($_ -is [System.IO.DirectoryInfo] -and $dir) {
-            Write-Host "$count | $($_.Name)" -ForegroundColor Red
+            Write-Host "$formattedCount $($_.Name)" -ForegroundColor Red
         }
         elseif ($_ -isnot [System.IO.DirectoryInfo] -and $files) {
-            Write-Host "$count | $($_.Name)" -ForegroundColor Blue
+            Write-Host "$formattedCount $($_.Name)" -ForegroundColor Blue
         }
     }
+    
 }
 
 # Llamada a la función

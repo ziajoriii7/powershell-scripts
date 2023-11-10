@@ -1,7 +1,7 @@
 
-function exe {
+function xx {
   param(
-      [int]$limit = 7, # Default limit
+      [int]$limit = 9, # Default limit
       [Alias('f')]
       [switch]$full
   )
@@ -26,7 +26,7 @@ function exe {
           Write-Host "$($item.Name)" -ForegroundColor Red -NoNewline
       } else {
           Write-Host "$formattedIndex " -NoNewline
-          Write-Host "$($item.Name)" -ForegroundColor Blue -NoNewline
+          Write-Host "$($item.Name)" -ForegroundColor Cyan -NoNewline
       }
       Write-Host ""
       $index++
@@ -63,7 +63,7 @@ function exe {
               }
           }
       } else {
-          Write-Host "Invalid selection." -ForegroundColor Cyan
+          Write-Host "Invalid selection." -ForegroundColor Green
       }
   } else {
       Write-Host "No items to display." -ForegroundColor Yellow
@@ -88,7 +88,8 @@ foreach ($arg in $args) {
 $fullFlag = $args -contains "-full" -or $args -contains "-f"
 
 # Check if there is a numeric limit argument and set it.
-$limit = 7 # Default limit
+$limit = 9
+# Default limit
 foreach ($arg in $args) {
   if ($arg -match "^-\d+$") {
     $limit = $arg.TrimStart('-') # Set the number limit, remove the dash
@@ -97,5 +98,7 @@ foreach ($arg in $args) {
 }
 
 # Call the exe function with the determined parameters.
-exe -limit $limit -full:$fullFlag
+xx -limit $limit -full:$fullFlag
 
+$finalCommand =  "Final Command Applied: xx -limit $limit -full:$fullFlag"
+# Write-Host $finalCommand -ForegroundColor Cyan
