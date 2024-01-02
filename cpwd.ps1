@@ -3,5 +3,5 @@ $quotedDirectory = "`"$currentDirectory`""
 
 Set-Clipboard -Value $quotedDirectory
 
-Write-Host "$currentDirectory"
+Write-Host "$currentDirectory copied to clipboard."
 
