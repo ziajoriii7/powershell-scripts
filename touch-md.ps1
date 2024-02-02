@@ -6,15 +6,12 @@ function touch {
 
   if (-not (Test-Path $filename)){
     New-Item -ItemType file -Path $filename
+    Add-Content -Path $filename -Value "# $filename`n"
   } else {
     (Get-Itemm $filename).LastWriteTime = Get-Date
   }
 }
 
-# if ($args.Count -gt 0){
-#   touch -filename $args[0]
-# }
-
 foreach ($arg in $args) {
   touch -filename $arg
-  }
+}
