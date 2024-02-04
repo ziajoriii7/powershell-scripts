@@ -11,7 +11,7 @@
     - if gif then `.gif`
     - if video then .mp4
     - if audio then .mp3
-  - ‼️ Just found *a better solution*: **MIME types** in HTTP headers.
+  - ❗ Just found *a better solution*: **MIME types** in HTTP headers.
     - [Common MIME types - Developer Mozilla Docs](https://www.freeformatter.com/mime-types-list.html)
       - `image/jpeg`
       - `image/png`
