@@ -20,14 +20,13 @@ function Center-Text {
   $paddedText = " " * [Math]::Floor($leftPadding) + $text
   Write-Host "$paddedText" -NoNewline # ForegroundColor DarkMagenta
 
-
 }
 
 function Get-TotalItemCount {
   # Center-Text "───────── ⋆⋅λ⋅⋆ ────────"
-  $totalDirs = (Get-ChildItem -Directory -Path $path).Count
+  $totalDirs = (Get-ChildItem -Directory -Path $path -Force ).Count
   $totalFiles = (Get-ChildItem -File -Path $path).Count
-  $total = (Get-ChildItem -Path $path).Count 
+  $total = (Get-ChildItem -Path $path).Count
   $currentDirName = Split-Path -Path $path -Leaf
   # Write-Host "`n"
   # Center-Text "$currentDirName's: "
@@ -75,10 +74,8 @@ function loltre {
 
  # foreach ($arg in $argsArray) {
  #   if ($arg -match "^\d+$") {
- #     # Si el argumento es un número, se considera el límite 'end'
  #     $end = [int]$arg
  #   } elseif ($arg -like "*.*") {
- #     # Si el argumento parece un patrón de archivo, se usa como 'wild'
  #     $wild = $arg
  #   } elseif ($arg -eq "-f") {
  #     $files = $true
@@ -110,7 +107,7 @@ function loltre {
     Write-Host "Files" -ForegroundColor Cyan
   }
 
-  Get-ChildItem -Path $path -Filter $wild | Sort-Object LastWriteTime -Descending | ForEach-Object {
+  Get-ChildItem -Path $path -Filter $wild -Force | Sort-Object LastWriteTime -Descending | ForEach-Object {
     $count++
     
     if ($end -and $count -gt $end) { return }
@@ -120,8 +117,12 @@ function loltre {
 
 
       if ($_ -is [System.IO.DirectoryInfo] -and $dirs) {
-        Write-Host "$formattedCount" -NoNewline 
-        Write-Host " $($_.Name)" -ForegroundColor Magenta
+        Write-Host "$formattedCount" -NoNewline
+        if ($_.Name -eq ".git") {
+          Write-Host " $($_.Name) [GIT Repo]" -ForegroundColor Yellow
+          } else {
+            Write-Host " $($_.Name)" -ForegroundColor Magenta
+          }
       }
       elseif ($_ -isnot [System.IO.DirectoryInfo] -and $files) {
         Write-Host "$formattedCount" -NoNewline
