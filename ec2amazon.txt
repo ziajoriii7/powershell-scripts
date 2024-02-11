@@ -1,1 +1,0 @@
-ssh -i .\goahead-ult-ec2-22.pem -o IdentitiesOnly=yes ec2-user@ec2-18-191-228-218.us-east-2.compute.amazonaws.com
