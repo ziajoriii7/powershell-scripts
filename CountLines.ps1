@@ -1,52 +1,48 @@
+
 param (
-  [Parameter(Position=0)]
-  [string]$directoryPath
+    [string[]]$FilePaths
 )
 
-if (-not $directoryPath) {
-    $directoryPath  = Read-Host "Please enter the directory path"
-}
+function Count-Lines {
+    param (
+        [string]$File
+    )
 
-$textFileExtensions = @("*.ps1", "*.py", "*.cpp", "*.hpp", "*.c", "*.h", "*.cs", "*.md", "*.ipynb", "*.js", "*.json", ".gitignore", "*.norg", "*html", "*.css", "*.txt")
-
-$fileLineCounts = @()
-
-foreach ($extension in $textFileExtensions) {
-  $textFiles = Get-ChildItem -Path $directoryPath -Filter $extension -File 
-
-  foreach ($file in $textFiles) {
-    $lineCount = (Get-Content $file.FullName | Measure-Object -Line).Lines 
-    $fileLineCounts += New-Object PSObject -Property @{
-      FileName = $file.Name 
-      LineCount = $lineCount
-      }
+    try {
+        $lineCount = (Get-Content $File -ErrorAction Stop | Measure-Object -Line).Lines
+        return [PSCustomObject]@{
+            FileName = (Split-Path $File -Leaf)
+            LineCount = $lineCount
+        }
+    }
+    catch {
+        Write-Host "'$(Split-Path $File -Leaf)' can't be accessed."
     }
 }
 
+$fileTypes = @("*.ps1", "*.py", "*.cpp", "*.hpp", "*.c", "*.h", "*.cs", "*.md", "*.ipynb", "*.js", "*.json", ".gitignore", "*.norg", "*.html", "*.css", "*.txt")
+$results = @()
 
+if ($FilePaths.Length -eq 0) {
+    $files = Get-ChildItem -Include $fileTypes -Recurse | Sort-Object LastWriteTime -Descending
+    foreach ($file in $files) {
+        $result = Count-Lines -File $file.FullName
+        if ($result -ne $null) {
+            $results += $result
+        }
+    }
+} else {
+    foreach ($path in $FilePaths) {
+        if (Test-Path $path) {
+            $absolutePath = Resolve-Path $path
+            $result = Count-Lines -File $absolutePath
+            if ($result -ne $null) {
+                $results += $result
+            }
+        } else {
+            Write-Host "'$path' doesn't exist."
+        }
+    }
+}
 
-
-
-
-
-
-## SEARCH FOR "Mime file type detection pwsh"
-## 1. previous solution (failed yet: search for github issues of powershell)
-## .. https://learn.microsoft.com/en-us/dotnet/api/system.web?view=netframework-4.8.1
-
-# foreach ($file in $allFiles) {
-#     $mimeType = [System.Web.MimeMapping]::GetMimeMapping($file.FullName)
-# 
-#     if ($mimeType.StartsWith("text/")) {
-#         $lineCount = (Get-Content $file.FullName | Measure-Object -Line).Lines
-#         $fileLineCounts += New-Object PSObject -Property @{
-#             FileName = $file.Name 
-#             LineCount = $lineCount
-#           }
-#       }
-#   }
-# 
-
-$sortedFileLineCounts = $fileLineCounts | Sort-Object -Property LineCount -Descending
-
-$sortedFileLineCounts
+$results | Format-Table -Property FileName, LineCount -AutoSize
