@@ -3,10 +3,12 @@
 
 ### searchHistory
 ```powershell
-choco install rg fzf -y
+choco install rg fzf dos2unix glow -y
 ```
 - fzf
 - rg
+- dos2unix
+- glow 
 
 ### md-pager
 ```python

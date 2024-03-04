@@ -1,14 +1,14 @@
 function touch {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$filename
-  )
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$filename
+	)
 
-  if (-not (Test-Path $filename)){
-    New-Item -ItemType file -Path $filename
-  } else {
-    (Get-Itemm $filename).LastWriteTime = Get-Date
-  }
+	if (-not (Test-Path $filename)) {
+		New-Item -ItemType file -Path $filename
+	} else {
+		(Get-Item $filename).LastWriteTime = Get-Date
+	}
 }
 
 # if ($args.Count -gt 0){
@@ -16,5 +16,5 @@ function touch {
 # }
 
 foreach ($arg in $args) {
-  touch -filename $arg
-  }
+	touch -FileName $arg
+}
