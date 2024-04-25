@@ -13,7 +13,8 @@ $separatorTitle = "=" * $title.Length
 # Write-Host $separatorTitle -ForegroundColor Cyan
 Write-Host "" 
 
-$files = Get-ChildItem -File | Where-Object {!$_.Attributes.ToString().Contains("Hidden")} | Sort-Object LastWriteTime -Descending
+$files = Get-ChildItem -File | Where-Object {!$_.Attributes.ToString().Contains("Hidden") -and $_.Extension -notmatch '\.pdf'} | Sort-Object LastWriteTime -Descending
+
 
 if ($StartIndex -lt 1 -or $EndIndex -gt $files.Count -or $EndIndex -lt $StartIndex) {
     Write-Host "The specified index range is out of bounds." -ForegroundColor Red
