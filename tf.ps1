@@ -1,27 +1,30 @@
 param(
-	[Parameter(Mandatory = $true, ValueFromRemainingArguments = $true)]
+	[Parameter(Mandatory = $true,ValueFromRemainingArguments = $true)]
 	[string[]]$filenames,
-	[Alias("md")][switch]$m,
-	[Alias("py")][switch]$python,
+	[Alias("md")] [switch]$m,
+	[Alias("py")] [switch]$python,
+	[switch]$ps1,
 	[switch]$c,
 	[switch]$cpp,
 	[switch]$js
 )
 
 function getFileExtension {
-	param (
+	param(
 		[switch]$python,
+		[switch]$ps1,
 		[switch]$c,
 		[switch]$cpp,
 		[switch]$m,
 		[switch]$js
 	)
 
-	if ($python) {return ".py"}
-	elseif($c) {return ".c"}
-	elseif($cpp) {return ".cpp"}
-	elseif($js) {return ".js"}
-	else { return ".md"}
+	if ($python) { return ".py" }
+	elseif ($c) { return ".c" }
+	elseif ($cpp) { return ".cpp" }
+	elseif ($js) { return ".js" }
+	elseif ($ps1) { return ".ps1" }
+	else { return ".md" }
 }
 
 $newFiles = @()
@@ -29,7 +32,7 @@ $modifiedFiles = @()
 $unchangedFiles = @()
 $fileTypes = @{}
 
-$extension = getFileExtension -python:$python -c:$c -cpp:$cpp -m:$m  -js:$js
+$extension = getFileExtension -python:$python -ps1:$ps1 -c:$c -cpp:$cpp -m:$m -js:$js
 
 
 foreach ($filename in $filenames) {
@@ -41,8 +44,8 @@ foreach ($filename in $filenames) {
 	if (-not $fileExtension) {
 		$filename = "$filename$extension"
 	}
-	
-	$header = if ($python -or $c -or $cpp -or $js) {""} else {"# $fileBaseName`n"}
+
+	$header = if ($python -or $ps1 -or $c -or $cpp -or $js) { "" } else { "# $fileBaseName`n" }
 
 
 	if (Test-Path $filename) {
@@ -60,7 +63,7 @@ foreach ($filename in $filenames) {
 	$parentDirName = Split-Path $parentPath -Leaf
 
 	if ((Split-Path $absolutePath -Leaf) -eq "README$extension") {
-		$header = if ($python -or $c -or $cpp -or $js) {""} else {"# $parentDirName`n"}
+		$header = if ($python -or $ps1 -or $c -or $cpp -or $js) { "" } else { "# $parentDirName`n" }
 		Write-Host "Header for README$extension $header"
 	}
 
