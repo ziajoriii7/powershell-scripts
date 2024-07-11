@@ -1,121 +1,192 @@
 param(
-	[Parameter(Position = 0)]
-	[string]$FirstArg,
-	[Parameter(Position = 1)]
-	[string]$SecondArg,
-	[int]$StartIndex = 1,
-	[int]$EndIndex = [int]::MaxValue,
-	[string[]]$ExcludeFiles = @(),
-	[Alias("r")] [switch]$Recursive,
-	[Alias("l")] [int]$level = [int]::MaxValue,
-	[string]$Path = "$pwd",
-	[string[]]$ExcludeDirs = @(".git","node_modules","bin","obj")
+	[Parameter(ValueFromRemainingArguments = $true)]
+	[string[]]$Args
 )
+
+$ExcludeFiles = @(".gitignore")
+$ExcludeDirs = @(".git","node_modules","bin","obj")
+$ExcludeExtensions = @(
+	".jpg",".jpeg",".png",".gif",".webp",".ico",
+	".pdf",".docx",".pptx",".xlsx",
+	".mp4",".webm",".mkv",".mp3",
+	".zip",".rar",".7z"
+)
+$Recursive = $false
+$RecursionLevel = 0
+$Path = "."
+$MaxLines = 2000
+$ExcludedFilesCount = 0
+$IgnoredFiles = @()
+$ExcludedFiles = @()
+
 
 function Test-IsInteger ($value) {
 	return $value -match '^\d+$'
 }
 
-if (Test-IsInteger $FirstArg -and Test-IsInteger $SecondArg) {
-	$StartIndex = [int]$FirstArg
-	$EndIndex = [int]$SecondArg
-} elseif ($FirstArg -like ".\*" -or $FirstArg -like "..\*") {
-	$Path = $FirstArg
-} elseif ($FirstArg) {
-	Write-Host "Invalid arguments. Please specify either two integers (StartIndex and EndIndex) or a valid path."
-	exit
+$StartIndex = 1
+$EndIndex = [int]::MaxValue
+$itemsToProcess = @()
+
+for ($i = 0; $i -lt $Args.Count; $i++) {
+	$arg = $Args[$i]
+	if ($arg -eq "-R") {
+		$Recursive = $true
+		if ($i + 1 -lt $Args.Count -and (Test-IsInteger $Args[$i + 1])) {
+			$RecursionLevel = [int]$Args[$i + 1]
+			$i++
+		} else {
+			$RecursionLevel = [int]::MaxValue
+		}
+	} elseif (Test-IsInteger $arg) {
+		if ($EndIndex -eq [int]::MaxValue) {
+			$EndIndex = [int]$arg
+		} else {
+			$StartIndex = $EndIndex
+			$EndIndex = [int]$arg
+		}
+	} elseif (Test-Path $arg -PathType Leaf) {
+		$itemsToProcess += @{ Type = "File"; Path = (Resolve-Path $arg).Path }
+	} elseif (Test-Path $arg -PathType Container) {
+		$itemsToProcess += @{ Type = "Directory"; Path = (Resolve-Path $arg).Path }
+	}
 }
 
+if ($itemsToProcess.Count -eq 0) {
+	$itemsToProcess += @{ Type = "Directory"; Path = (Resolve-Path $Path).Path }
+}
 
 Write-Host ""
-$title = "-ˋˏ ༻❁༺ ˎˊ- PYGMENTIZE FILE PROCESSOR -ˋˏ ༻❁༺ ˎˊ-"
-$separatorTitle = "=" * $title.Length
+$title = "loopsie coloring"
+$separatorTitle = "∴⋮" * $($title.Length / 2)
 Write-Host $title -ForegroundColor Cyan
 Write-Host $separatorTitle -ForegroundColor Cyan
-Write-Host "Scanning directory: $Path"
-
 
 function Get-FilesRecursive {
 	param(
 		[string]$Directory,
 		[int]$CurrentDepth = 0
 	)
-	if ($CurrentDepth -ge $level) {
-		return
+	if ($CurrentDepth -gt $RecursionLevel) {
+		return @()
 	}
-	Write-Host "Entering directory: $Directory" -ForegroundColor DarkGreen
-
-	$childFiles = Get-ChildItem -Path $Directory -File | Where-Object {
+	$allFiles = Get-ChildItem -Path $Directory -File
+	$childFiles = $allFiles | Where-Object {
 		!$_.Attributes.ToString().Contains("Hidden") -and
-		$_.Extension -notmatch '\.(pdf|ipynb)$'
+		$_.Extension -notin $ExcludeExtensions -and
 		$ExcludeFiles -notcontains $_.Name
 	} | Sort-Object LastWriteTime -Descending
 
-	$childFiles
-
-	$childDirs = Get-ChildItem -Path $Directory -Directory | Where-Object {
-		$ExcludeDirs -notcontains $_.Name
+	$ignoredFiles = $allFiles | Where-Object {
+		$_.Extension -in $ExcludeExtensions -or
+		$ExcludeFiles -contains $_.Name
 	}
-	foreach ($childDir in $childDirs) {
-		Get-FilesRecursive -Directory $childDir.FullName -CurrentDepth ($CurrentDepth + 1)
-	}
-}
+	$script:IgnoredFiles += $ignoredFiles | ForEach-Object { $_.FullName }
 
-$files = @()
-if ($Recursive) {
-	$files += Get-FilesRecursive -Directory $Path
-} else {
-	$files += Get-ChildItem -Path $Path -File | Where-Object {
-		!$_.Attributes.ToString().Contains("Hidden") -and
-		$_.Extension -notmatch '\.(pdf|ipynb)$'
-		$ExcludeFiles -notcontains $_.Name
-	} | Sort-Object LastWriteTime -Descending
-}
+	$result = @() + $childFiles
 
-Write-Host "Files found: $($files.Count)"
-if ($files.Count -eq 0) {
-	Write-Host "No files found matching criteria." -ForegroundColor Yellow
-	exit
-}
-
-if ($EndIndex -eq [int]::MaxValue) {
-	$EndIndex = $files.Count
-}
-
-if ($StartIndex -lt 1 -or $EndIndex -gt $files.Count -or $EndIndex -lt $StartIndex) {
-	Write-Host "The specified index range is out of bounds." -ForegroundColor Red
-	exit
-}
-
-$currentProcessingIndex = 1
-
-foreach ($file in $files) {
-	if ($currentProcessingIndex -lt $StartIndex -or $currentProcessingIndex -gt $EndIndex) {
-		$currentProcessingIndex++
-		continue
-	}
-
-	$lineCount = (Get-Content $file.FullName | Measure-Object -Line).Lines
-	if ($lineCount -gt 2000) {
-		$response = Read-Host "Warning: File $($file.Name) has more than 2000 lines. Do you want to proceed? (Y/N)"
-		if ($response -ne 'Y') {
-			Write-Host "Skipping: $($file.Name)" -ForegroundColor Yellow
-			$currentProcessingIndex++
-			continue
+	if ($CurrentDepth -lt $RecursionLevel) {
+		$childDirs = Get-ChildItem -Path $Directory -Directory | Where-Object {
+			$ExcludeDirs -notcontains $_.Name
+		}
+		foreach ($childDir in $childDirs) {
+			$result += Get-FilesRecursive -Directory $childDir.FullName -CurrentDepth ($CurrentDepth + 1)
 		}
 	}
 
-	$header = "`nFILE ${currentProcessingIndex}: $($file.Name)"
-	$separator = "*" * $header.Length
+	return $result
+}
 
-	Write-Host $header -ForegroundColor DarkMagenta
-	Write-Host $separator -ForegroundColor DarkMagenta
 
-	& pygmentize -O style=friendly -f terminal256 $file.FullName
-
-	Write-Host ""
-	if ($currentProcessingIndex -ge $EndIndex) {
-		break
+function Process-Files {
+	param(
+		[System.IO.FileInfo[]]$Files,
+		[int]$Start = 1,
+		[int]$End = [int]::MaxValue
+	)
+	$currentIndex = 1
+	$lastDirectory = ""
+	foreach ($file in $Files) {
+		if ($currentIndex -ge $Start -and $currentIndex -le $End) {
+			if ($file.Directory.FullName -ne $lastDirectory) {
+				Write-Host "`n-> Entering directory: $($file.Directory.FullName)" -ForegroundColor DarkGreen
+				$lastDirectory = $file.Directory.FullName
+			}
+			$lineCount = (Get-Content $file.FullName | Measure-Object -Line).Lines
+			if ($lineCount -gt $MaxLines) {
+				$script:ExcludedFilesCount++
+				$script:ExcludedFiles += [pscustomobject]@{
+					Name = $file.Name
+					Path = $file.FullName
+					LineCount = $lineCount
+				}
+				$header = "FILE ${currentIndex}: $($file.Name) (Excluded - $lineCount lines)"
+				$separator = "─" * $header.Length
+				Write-Host $header -ForegroundColor Yellow
+				Write-Host $separator -ForegroundColor Yellow
+				$content = Get-Content $file.FullName
+				Write-Host "First two lines:" -ForegroundColor Yellow
+				Write-Host $content[0..1] -ForegroundColor Gray
+				Write-Host "Last two lines:" -ForegroundColor Yellow
+				Write-Host $content[-2..-1] -ForegroundColor Gray
+			} else {
+				$header = "FILE ${currentIndex}: $($file.Name)"
+				$separator = "─" * $header.Length
+				Write-Host $header -ForegroundColor DarkMagenta
+				Write-Host $separator -ForegroundColor DarkMagenta
+				& pygmentize -O style=friendly -f terminal256 $file.FullName
+			}
+			Write-Host ""
+		}
+		$currentIndex++
 	}
-	$currentProcessingIndex++
+}
+
+
+foreach ($item in $itemsToProcess) {
+	switch ($item.Type) {
+		"Directory" {
+			Write-Host "Processing directory: $($item.Path)" -ForegroundColor Yellow
+			if ($Recursive) {
+				$files = Get-FilesRecursive -Directory $item.Path
+			} else {
+				$allFiles = Get-ChildItem -Path $item.Path -File
+				$files = $allFiles | Where-Object {
+					!$_.Attributes.ToString().Contains("Hidden") -and
+					$_.Extension -notin $ExcludeExtensions -and
+					$ExcludeFiles -notcontains $_.Name
+				} | Sort-Object LastWriteTime -Descending
+				$script:IgnoredFiles += $allFiles | Where-Object {
+					$_.Extension -in $ExcludeExtensions -or
+					$ExcludeFiles -contains $_.Name
+				} | ForEach-Object { $_.FullName }
+			}
+			Write-Host "Processing files $StartIndex to $EndIndex" -ForegroundColor Yellow
+			Process-Files -Files $files -Start $StartIndex -End $EndIndex
+		}
+		"File" {
+			Write-Host "Processing file: $($item.Path)" -ForegroundColor Yellow
+			$file = Get-Item $item.Path
+			if ($file.Extension -notin $ExcludeExtensions -and $ExcludeFiles -notcontains $file.Name) {
+				Process-Files -Files @($file)
+			} else {
+				Write-Host "Skipping excluded file: $($file.Name)" -ForegroundColor Yellow
+				$script:IgnoredFiles += $file.FullName
+			}
+		}
+	}
+}
+
+Write-Host "`nProcessing complete."
+Write-Host "Files excluded due to exceeding $MaxLines lines: $ExcludedFilesCount" -ForegroundColor Yellow
+if ($ExcludedFiles.Count -gt 0) {
+	Write-Host "Excluded files list:" -ForegroundColor Yellow
+	foreach ($file in $ExcludedFiles) {
+		Write-Host " $($file.Name) - $($file.lineCount) lines" -Foreground Gray
+	}
+}
+Write-Host "Ignored files: $($IgnoredFiles.Count)" -ForegroundColor Yellow
+if ($IgnoredFiles.Count -gt 0) {
+	Write-Host "Ignored file list:" -ForegroundColor Yellow
+	$IgnoredFiles | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
 }
